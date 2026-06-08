@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HANDOVER IRNA SQUAD - Sistem Operan & SBAR Medis</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Gaya transisi global */
+        .transition-all-custom {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Custom Scrollbar untuk tampilan premium */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Efek khusus cetak medis */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                font-size: 11px !important;
+            }
+            .print-card {
+                border: 1px solid #94a3b8 !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+                margin-bottom: 1.5rem !important;
+            }
+            .print-header {
+                border-bottom: 2px solid #000000 !important;
+                padding-bottom: 10px !important;
+                margin-bottom: 20px !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- HEADER UTAMA -->
+    <header class="bg-gradient-to-r from-blue-800 to-indigo-900 text-white shadow-lg no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner">
+                    <i data-lucide="activity" class="w-7 h-7 text-emerald-400 animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight">HANDOVER IRNA SQUAD</h1>
+                    <p class="text-xs text-blue-200 font-medium">Sistem Informasi Manajemen & Dokumentasi Handover SBAR</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Status Tanggal Realtime -->
+                <div class="bg-white/10 px-3.5 py-1.5 rounded-lg border border-white/10 flex items-center gap-2 text-xs font-semibold">
+                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i>
+                    <span id="current-date-display">Minggu, 31 Mei 2026</span>
+                </div>
+                <!-- Tombol Panduan Google Sheets -->
+                <button onclick="openHelpModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i> Panduan Spreadsheet
+                </button>
+                <!-- Tombol Cetak -->
+                <button onclick="window.print()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-sm">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Cetak Dokumen
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- PANEL KONTEN UTAMA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- COLUMN KIRI: INPUT FORMULIR PASIEN & SBAR (HIDDEN SAAT PRINT) -->
+            <section class="lg:col-span-5 no-print">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-6">
+                    <div class="bg-gradient-to-r from-blue-700 to-indigo-800 px-5 py-4 text-white flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="user-plus" class="w-5 h-5 text-emerald-400"></i>
+                            <h2 id="form-title" class="font-bold text-base">Input Pasien Baru</h2>
+                        </div>
+                        <button id="btn-cancel-edit" onclick="resetForm()" class="hidden text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-white font-medium border border-white/10">
+                            Batal Edit
+                        </button>
+                    </div>
+
+                    <form id="handover-form" onsubmit="savePatient(event)" class="p-5 space-y-4">
+                        <input type="hidden" id="edit-id" value="">
+
+                        <!-- SHIFT KERJA -->
+                        <div class="space-y-1">
+                            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Shift Tujuan Dinas (Operan)</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <label class="border rounded-lg p-2.5 flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-50 border-slate-200 transition text-xs font-semibold">
+                                    <input type="radio" name="form-shift" value="Pagi" checked class="text-blue-600">
+                                    Pagi
+                                </label>
+                                <label class="border rounded-lg p-2.5 flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-50 border-slate-200 transition text-xs font-semibold">
+                                    <input type="radio" name="form-shift" value="Siang" class="text-blue-600">
+                                    Siang
+                                </label>
+                                <label class="border rounded-lg p-2.5 flex items-center justify-center gap-1.5 cursor-pointer hover:bg-slate-50 border-slate-200 transition text-xs font-semibold">
+                                    <input type="radio" name="form-shift" value="Malam" class="text-blue-600">
+                                    Malam
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- IDENTITAS DASAR -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Nama Lengkap Pasien</label>
+                                <input type="text" id="form-name" required placeholder="Contoh: Tn. Heri Setiawan" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm font-medium">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Nomor Bed / Ruangan</label>
+                                <input type="text" id="form-bed" required placeholder="Contoh: Sakura 02-B" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <!-- DIAGNOSA & PENANGGUNG JAWAB -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Diagnosa Medis</label>
+                                <input type="text" id="form-diagnosis" required placeholder="Contoh: Post Op Apendiktomi" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Perawat PJ (Shift Ini)</label>
+                                <input type="text" id="form-pj" placeholder="Contoh: Ns. Siska, S.Kep" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- DOKTER DPJP & DOKTER LAINNYA -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Dokter DPJP (Utama)</label>
+                                <input type="text" id="form-dpjp" placeholder="Contoh: dr. Ahmad, Sp.B" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Dokter Lainnya / Konsulen</label>
+                                <input type="text" id="form-other-doctors" placeholder="Contoh: dr. Siska, Sp.An" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm">
+                            </div>
+                        </div>
+
+                        <!-- STATUS DISPOSISI / KEPULANGAN PASIEN -->
+                        <div class="space-y-1">
+                            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Status / Kepulangan Pasien</label>
+                            <select id="form-disposition" onchange="handleFormDispositionChange()" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-sm font-semibold text-slate-700 bg-white">
+                                <option value="Aktif" selected>Aktif (Dalam Perawatan)</option>
+                                <option value="Pulang/Sembuh">Pulang / Sembuh</option>
+                                <option value="APS">APS (Atas Permintaan Sendiri)</option>
+                                <option value="Meninggal">Meninggal Dunia</option>
+                                <option value="Pindah Ruang">Pindah Ruangan / Bangsal</option>
+                                <option value="Rujuk">Dirujuk ke RS Lain</option>
+                            </select>
+                        </div>
+
+                        <!-- FORUM KOMUNIKASI SBAR TERPISAH -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-3">
+                            <span class="text-[10px] font-extrabold text-blue-800 tracking-wider block uppercase border-b pb-1">KERANGKA KOMUNIKASI SBAR</span>
+                            
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Situation (S)</label>
+                                <textarea id="form-s" rows="2" placeholder="Tuliskan keluhan utama, tanda vital abnormal, atau perubahan kondisi akut..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-xs"></textarea>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Background (B)</label>
+                                <textarea id="form-b" rows="2" placeholder="Tuliskan diagnosa masuk, riwayat penyakit, terapi obat, riwayat alergi..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-xs"></textarea>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Assessment (A)</label>
+                                <textarea id="form-a" rows="2" placeholder="Hasil pemeriksaan klinis terbaru, TTV terakhir, status neurologis/gizi..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-xs"></textarea>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Recommendation (R)</label>
+                                <textarea id="form-r" rows="2" placeholder="Instruksi dokter/DPJP, rencana tindakan, monitoring khusus, ganti perban..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200 text-xs"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- TOMBOL SUBMIT -->
+                        <button type="submit" id="btn-submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                            <i data-lucide="save" class="w-4 h-4"></i> Simpan Data Pasien
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- COLUMN KANAN: DAFTAR PASIEN, FILTER, & INTEGRASI (SANGAT ADAPTIF) -->
+            <section class="lg:col-span-7 space-y-4 print:col-span-12">
+                
+                <!-- INTEGRASI SPREADSHEET & TABS MENU (HIDDEN SAAT PRINT) -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 space-y-3 no-print">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div class="flex border-b border-slate-200 w-full md:w-auto">
+                            <button id="tab-active" onclick="switchTab('active')" class="border-b-2 border-blue-600 px-4 py-2 text-sm font-extrabold text-blue-700 tracking-tight flex items-center gap-2">
+                                <i data-lucide="user-check" class="w-4 h-4"></i> Pasien Aktif
+                            </button>
+                            <button id="tab-archive" onclick="switchTab('archive')" class="border-b-2 border-transparent px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 tracking-tight flex items-center gap-2">
+                                <i data-lucide="archive" class="w-4 h-4"></i> Riwayat & Arsip
+                            </button>
+                        </div>
+
+                        <!-- SINKRONISASI SPREADSHEET -->
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <input type="text" id="spreadsheet-url" onchange="syncFromSpreadsheet(false)" placeholder="URL Web App Apps Script" class="flex-1 md:w-48 px-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-blue-500 border-slate-200">
+                            <button onclick="syncFromSpreadsheet(false)" title="Tarik data terbaru dari Google Sheets" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                                <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i> Tarik Data
+                            </button>
+                            <button onclick="syncToSpreadsheet()" title="Kirim data lokal saat ini ke Google Sheets" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                                <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i> Kirim Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SEARCH & FILTER SHIFT -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-1">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                            <input type="text" id="search-bar" oninput="render()" placeholder="Cari Pasien (Nama, Bed, Diagnosis, DPJP)..." class="w-full pl-9 pr-4 py-2 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 border-slate-200">
+                        </div>
+                        <div class="flex gap-1.5 overflow-x-auto pb-1">
+                            <button onclick="setFilter('Semua')" id="filter-Semua" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm border border-blue-600">Semua Shift</button>
+                            <button onclick="setFilter('Pagi')" id="filter-Pagi" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">Pagi</button>
+                            <button onclick="setFilter('Siang')" id="filter-Siang" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">Siang</button>
+                            <button onclick="setFilter('Malam')" id="filter-Malam" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">Malam</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAFTAR KARTU PASIEN (PREMIUM & RESPONSIVE) -->
+                <div id="patient-list" class="space-y-4">
+                    <!-- Data Pasien Di-Render Melalui JavaScript -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MODAL PANDUAN INTEGRASI SPREADSHEET -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 flex flex-col">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-2 text-slate-800">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                    <h3 class="font-extrabold text-base">Panduan Integrasi Google Spreadsheet</h3>
+                </div>
+                <button onclick="closeHelpModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-xs text-slate-600 leading-relaxed">
+                <p>Ikuti langkah-langkah di bawah ini untuk menghubungkan aplikasi <strong>HANDOVER IRNA SQUAD</strong> dengan Google Spreadsheet Anda:</p>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>Buat Spreadsheet Baru di Google Drive Anda.</li>
+                    <li>Di Google Sheet, buka menu <strong>Ekstensi (Extensions)</strong> &gt; pilih <strong>Apps Script</strong>.</li>
+                    <li>Hapus seluruh kode default di editor Apps Script, lalu tempel kode berikut:
+                        <pre class="bg-slate-100 p-3 rounded-lg font-mono text-[10px] mt-1.5 overflow-x-auto text-slate-800 select-all">
+function doPost(e) {
+  try {
+    var json = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      var headers = ["ID Pasien", "Tanggal Handover", "Nama Pasien", "No. Bed", "Diagnosa", "DPJP", "Dokter Lainnya", "Perawat PJ", "Shift", "Situation (S)", "Background (B)", "Assessment (A)", "Recommendation (R)", "Status", "Logs (JSON)"];
+      sheet.appendRow(headers);
+      var headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setFontWeight("bold").setBackground("#1e3a8a").setFontColor("#ffffff").setHorizontalAlignment("center").setVerticalAlignment("middle");
+      sheet.setRowHeight(1, 30);
+    } else {
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) { sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent(); }
+    }
+    json.forEach(function(p) {
+      sheet.appendRow([p.id, p.timestamp || new Date().toISOString(), p.name, p.bed, p.diagnosis, p.dpjp || '-', p.otherDoctors || '-', p.pj || '-', p.shift, p.s || '-', p.b || '-', p.a || '-', p.r || '-', p.status || 'Aktif', JSON.stringify(p.logs || [])]);
+    });
+    for (var col = 1; col <= 15; col++) { sheet.autoResizeColumn(col); }
+    return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Berhasil menyelaraskan data!"})).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) { return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON); }
+    var values = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    var data = [];
+    for (var i = 0; i < values.length; i++) {
+      var row = values[i];
+      var logsArr = [];
+      try { logsArr = JSON.parse(row[14]); } catch(e) { logsArr = []; }
+      data.push({
+        id: Number(row[0]), timestamp: row[1], name: row[2], bed: row[3], diagnosis: row[4],
+        dpjp: row[5] === '-' ? '' : row[5], otherDoctors: row[6] === '-' ? '' : row[6],
+        pj: row[7] === '-' ? '' : row[7], shift: row[8], s: row[9] === '-' ? '' : row[9],
+        b: row[10] === '-' ? '' : row[10], a: row[11] === '-' ? '' : row[11], r: row[12] === '-' ? '' : row[12],
+        status: row[13], logs: logsArr
+      });
+    }
+    return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  } catch(error) {
+    return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                    </li>
+                    <li>Klik ikon **Save (Simpan)** di Apps Script.</li>
+                    <li>Klik tombol **Terapkan (Deploy)** di kanan atas &gt; pilih **Penerapan Baru (New deployment)**.</li>
+                    <li>Pilih jenis penerapan: **Aplikasi Web (Web app)**.</li>
+                    <li>Atur konfigurasi:
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li><strong>Jalankan sebagai (Execute as):</strong> Saya (Me)</li>
+                            <li><strong>Siapa yang memiliki akses (Who has access):</strong> Siapa saja (Anyone)</li>
+                        </ul>
+                    </li>
+                    <li>Klik **Terapkan (Deploy)**. Jika diminta, klik **Berikan akses (Authorize access)** dan izinkan menggunakan akun Google Anda.</li>
+                    <li>Salin **URL Aplikasi Web** yang diberikan oleh Google.</li>
+                    <li>Tempelkan (*paste*) URL tersebut ke kolom input di sudut kanan atas aplikasi ini dan klik **Kirim Data**.</li>
+                </ol>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <button onclick="closeHelpModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition">
+                    Saya Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM CONFIRMATION UNTUK HAPUS DATA -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-xl shadow-2xl p-5 max-w-sm w-full border border-slate-200">
+            <div class="flex items-center gap-3 text-red-600 mb-3">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                <h4 class="font-extrabold text-base text-slate-800">Hapus Rekam Medis</h4>
+            </div>
+            <p class="text-xs text-slate-500 mb-5 leading-normal">Tindakan ini akan menghapus data pasien dan seluruh riwayat catatan log medisnya secara permanen. Apakah Anda yakin?</p>
+            <div class="flex gap-2 justify-end">
+                <button id="btn-cancel-confirm" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition">Batal</button>
+                <button id="btn-confirm-delete" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs transition">Hapus Permanen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM ALERT -->
+    <div id="alert-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-xl shadow-2xl p-5 max-w-sm w-full border border-slate-200">
+            <div class="flex items-center gap-3 text-amber-500 mb-3">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                <h4 class="font-extrabold text-base text-slate-800">Informasi Penting</h4>
+            </div>
+            <p id="alert-modal-message" class="text-xs text-slate-500 mb-5 leading-normal">Pesan peringatan akan muncul di sini.</p>
+            <div class="flex justify-end">
+                <button onclick="closeAlert()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs transition">Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFIKASI TOAST MELAYANG -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-white/10 text-xs font-semibold flex items-center gap-2 transition duration-300 transform translate-y-20 opacity-0 no-print">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toast-message">Operasi berhasil dilakukan!</span>
+    </div>
+
+    <!-- ================================= JAVA SCRIPT ================================= -->
+    <script>
+        // Data inisial dengan format tanggal ISO untuk parsing yang konsisten
+        const mockPatients = [
+            {
+                id: 1,
+                name: "Tn. Heri Prasetyo",
+                bed: "Sakura 02-B",
+                diagnosis: "Post Op Hernia Inguinalis",
+                pj: "Ns. Diana, S.Kep",
+                dpjp: "dr. Ahmad, Sp.B",
+                otherDoctors: "dr. Siska, Sp.An",
+                shift: "Pagi",
+                s: "Pasien mengeluh luka bekas operasi sedikit nyeri (Skala 3).",
+                b: "Pasien terpasang infus NaCl 0.9% 500ml / 8 jam. Riwayat alergi obat penisilin.",
+                a: "TTV stabil: TD 115/75 mmHg, Nadi 80 x/mnt, Suhu 36.5°C, SpO2 99% udara bebas.",
+                r: "Ganti verban luka operasi besok pagi, berikan ketorolac 30mg IV pukul 12.00 WIB.",
+                timestamp: "2026-05-31T08:30:15.000Z",
+                status: "Aktif",
+                logs: [] 
+            },
+            {
+                id: 2,
+                name: "Ny. Lestari Wahyuni",
+                bed: "Sakura 05-A",
+                diagnosis: "Gastroenteritis Akut (GEA)",
+                pj: "Ns. Bambang, A.Md.Kep",
+                dpjp: "dr. Budiman, Sp.PD",
+                otherDoctors: "-",
+                shift: "Siang",
+                s: "Diare sudah berkurang dari 6 kali menjadi 2 kali, pasien lemas.",
+                b: "Masuk rumah sakit 2 hari lalu akibat mual muntah berlebih. Dehidrasi sedang.",
+                a: "TTV: TD 110/70, Nadi 84, Suhu 37.0°C. Terapi rehidrasi lancar, turgor kulit membaik.",
+                r: "Pertahankan infus RL 20 tpm, cek berkala eliminasi pasien, konsul diet lunak berlanjut.",
+                timestamp: "2026-05-31T14:15:33.000Z",
+                status: "Aktif",
+                logs: []
+            }
+        ];
+
+        let patients = [];
+        let archives = [];
+        let currentTab = "active"; // "active" atau "archive"
+        let currentFilter = "Semua"; // "Semua", "Pagi", "Siang", "Malam"
+        let deleteTargetId = null;
+
+        window.onload = function() {
+            // Pemuatan Database Browser
+            const savedPatients = localStorage.getItem('irna_squad_patients');
+            const savedArchives = localStorage.getItem('irna_squad_archives');
+            const savedUrl = localStorage.getItem('irna_squad_url');
+
+            patients = savedPatients ? JSON.parse(savedPatients) : mockPatients;
+            archives = savedArchives ? JSON.parse(savedArchives) : [];
+            
+            if (savedUrl) {
+                document.getElementById('spreadsheet-url').value = savedUrl;
+                // Tarik & Sinkronisasi data latar belakang otomatis saat aplikasi dibuka
+                syncFromSpreadsheet(true);
+            }
+
+            // Atur waktu sekarang
+            document.getElementById('current-date-display').innerText = formatIndonesianDateTime(new Date().toISOString(), false);
+
+            lucide.createIcons();
+            render();
+        }
+
+        // Format Waktu Indonesia Detil
+        function formatIndonesianDateTime(isoString, includeTime = true) {
+            try {
+                const date = new Date(isoString);
+                if (isNaN(date.getTime())) return "-";
+                
+                const hari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+                const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                
+                const namaHari = hari[date.getDay()];
+                const tgl = date.getDate();
+                const namaBulan = bulan[date.getMonth()];
+                const thn = date.getFullYear();
+                
+                let format = `${namaHari}, ${tgl} ${namaBulan} ${thn}`;
+                
+                if (includeTime) {
+                    const jam = String(date.getHours()).padStart(2, '0');
+                    const menit = String(date.getMinutes()).padStart(2, '0');
+                    const detik = String(date.getSeconds()).padStart(2, '0');
+                    format += ` - Pukul ${jam}:${menit}:${detik} WIB`;
+                }
+                return format;
+            } catch(e) {
+                return "-";
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('irna_squad_patients', JSON.stringify(patients));
+            localStorage.setItem('irna_squad_archives', JSON.stringify(archives));
+            const url = document.getElementById('spreadsheet-url').value.trim();
+            localStorage.setItem('irna_squad_url', url);
+        }
+
+        function savePatient(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('form-name').value.trim();
+            const bed = document.getElementById('form-bed').value.trim();
+            const diagnosis = document.getElementById('form-diagnosis').value.trim();
+            const pj = document.getElementById('form-pj').value.trim() || 'Ns. Berjaga';
+            const dpjp = document.getElementById('form-dpjp').value.trim() || '-';
+            const otherDoctors = document.getElementById('form-other-doctors').value.trim() || '-';
+            const s = document.getElementById('form-s').value.trim() || '-';
+            const b = document.getElementById('form-b').value.trim() || '-';
+            const a = document.getElementById('form-a').value.trim() || '-';
+            const r = document.getElementById('form-r').value.trim() || '-';
+            const statusVal = document.getElementById('form-disposition').value;
+            
+            const shiftRadios = document.getElementsByName('form-shift');
+            let selectedShift = 'Pagi';
+            for (let radio of shiftRadios) {
+                if (radio.checked) {
+                    selectedShift = radio.value;
+                    break;
+                }
+            }
+
+            if (!name || !bed || !diagnosis) {
+                openAlert("Harap isi Nama Pasien, Nomor Bed, dan Diagnosa!");
+                return;
+            }
+
+            const editId = document.getElementById('edit-id').value;
+
+            if (editId) {
+                // PROSES UPDATE DATA PASIEN AKTIF
+                const existingPatient = patients.find(p => p.id == editId);
+                let newLogs = existingPatient ? [...(existingPatient.logs || [])] : [];
+                
+                // BACKUP CATATAN SBAR SHIFT SEBELUMNYA JIKA ADA PERUBAHAN SHIFT KERJA
+                if (existingPatient && existingPatient.shift !== selectedShift) {
+                    newLogs.push({
+                        shift: existingPatient.shift,
+                        pj: existingPatient.pj || 'Ns. Berjaga',
+                        s: existingPatient.s || '-',
+                        b: existingPatient.b || '-',
+                        a: existingPatient.a || '-',
+                        r: existingPatient.r || '-',
+                        timestamp: existingPatient.timestamp || new Date().toISOString()
+                    });
+                }
+
+                const updatedPatient = {
+                    id: Number(editId),
+                    name, bed, diagnosis, pj, dpjp, otherDoctors, s, b, a, r,
+                    shift: selectedShift,
+                    timestamp: new Date().toISOString(),
+                    status: statusVal,
+                    logs: newLogs
+                };
+
+                // Jika statusnya dipulangkan, langsung diarsipkan
+                if (statusVal !== 'Aktif') {
+                    archivePatient(updatedPatient, statusVal);
+                    patients = patients.filter(p => p.id != editId);
+                    showToast(`Pasien ${name} dideposisikan (${statusVal})! Bed kosong.`);
+                } else {
+                    patients = patients.map(p => p.id == editId ? updatedPatient : p);
+                    showToast("Hasil operan shift dideklarasikan & riwayat dinas sebelumnya disimpan!");
+                }
+            } else {
+                // PENDAFTARAN PASIEN BARU dengan properti dokter
+                const newPatient = {
+                    id: Date.now(),
+                    name, bed, diagnosis, pj, dpjp, otherDoctors, s, b, a, r,
+                    shift: selectedShift,
+                    timestamp: new Date().toISOString(),
+                    status: statusVal,
+                    logs: []
+                };
+
+                if (statusVal !== 'Aktif') {
+                    archivePatient(newPatient, statusVal);
+                    showToast(`Pasien baru langsung diarsipkan dengan status: ${statusVal}`);
+                } else {
+                    patients.unshift(newPatient);
+                    showToast("Pasien baru didaftarkan di bangsal perawatan!");
+                }
+            }
+
+            saveToStorage();
+            resetForm();
+            render();
+        }
+
+        // Memindahkan data aktif ke tab riwayat/arsip secara instan
+        function archivePatient(patientObj, dispositionStatus) {
+            patientObj.status = dispositionStatus;
+            patientObj.timestamp = new Date().toISOString();
+            
+            // Backup SBAR akhir ke log sebelum dipindahkan
+            patientObj.logs.push({
+                shift: patientObj.shift,
+                pj: patientObj.pj,
+                s: patientObj.s,
+                b: patientObj.b,
+                a: patientObj.a,
+                r: patientObj.r,
+                timestamp: new Date().toISOString()
+            });
+
+            // Kosongkan isi kolom aktifnya
+            patientObj.s = "-";
+            patientObj.b = "-";
+            patientObj.a = "-";
+            patientObj.r = "-";
+
+            archives.unshift(patientObj);
+        }
+
+        function startEditForShift(id, targetShift) {
+            const patient = patients.find(p => p.id === id);
+            if (!patient) return;
+
+            document.getElementById('edit-id').value = patient.id;
+            document.getElementById('form-name').value = patient.name;
+            document.getElementById('form-bed').value = patient.bed;
+            document.getElementById('form-diagnosis').value = patient.diagnosis;
+            document.getElementById('form-dpjp').value = patient.dpjp || '';
+            document.getElementById('form-other-doctors').value = patient.otherDoctors || '';
+            document.getElementById('form-disposition').value = patient.status || "Aktif";
+
+            const shiftRadios = document.getElementsByName('form-shift');
+            for (let radio of shiftRadios) {
+                if (radio.value === targetShift) {
+                    radio.checked = true;
+                } else {
+                    radio.checked = false;
+                }
+            }
+
+            // Otomatis mengosongkan SBAR jika berpindah shift agar siap diisi baru
+            if (patient.shift !== targetShift) {
+                document.getElementById('form-pj').value = "";
+                document.getElementById('form-s').value = "";
+                document.getElementById('form-b').value = "";
+                document.getElementById('form-a').value = "";
+                document.getElementById('form-r').value = "";
+                document.getElementById('form-title').innerText = `Operan SBAR ke Shift ${targetShift}`;
+            } else {
+                // Jika mengedit shift yang sama, muat data yang ada
+                document.getElementById('form-pj').value = patient.pj || '';
+                document.getElementById('form-s').value = patient.s || '';
+                document.getElementById('form-b').value = patient.b || '';
+                document.getElementById('form-a').value = patient.a || '';
+                document.getElementById('form-r').value = patient.r || '';
+                document.getElementById('form-title').innerText = `Edit Laporan Shift ${patient.shift}`;
+            }
+
+            document.getElementById('btn-submit').innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Simpan Hasil Operan`;
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            // Geser scroll ke sisi formulir untuk mobile
+            window.scrollTo({ top: 120, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
+        // Aksi cepat pemulangan pasien tanpa lewat form
+        function quickDischarge(id, dispositionType) {
+            const patient = patients.find(p => p.id === id);
+            if (!patient) return;
+
+            archivePatient(patient, dispositionType);
+            patients = patients.filter(p => p.id !== id);
+            
+            saveToStorage();
+            render();
+            showToast(`Pasien ${patient.name} dideposisikan (${dispositionType}). Bed kosong.`);
+        }
+
+        // Mengembalikan pasien dari arsip riwayat ke rawat inap aktif
+        function restorePatient(id) {
+            const archiveIdx = archives.findIndex(a => a.id === id);
+            if (archiveIdx === -1) return;
+
+            const restored = archives[archiveIdx];
+            restored.status = "Aktif";
+            restored.timestamp = new Date().toISOString();
+
+            // Kembalikan SBAR terakhir dari logs jika ada
+            if (restored.logs && restored.logs.length > 0) {
+                const lastLog = restored.logs[restored.logs.length - 1];
+                restored.shift = lastLog.shift;
+                restored.pj = lastLog.pj;
+                restored.s = lastLog.s;
+                restored.b = lastLog.b;
+                restored.a = lastLog.a;
+                restored.r = lastLog.r;
+            }
+
+            patients.unshift(restored);
+            archives.splice(archiveIdx, 1);
+
+            saveToStorage();
+            render();
+            showToast(`Pasien ${restored.name} kembali dirawat aktif.`);
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = "";
+            document.getElementById('handover-form').reset();
+            document.getElementById('form-dpjp').value = "";
+            document.getElementById('form-other-doctors').value = "";
+            document.getElementById('form-title').innerText = "Input Pasien Baru";
+            document.getElementById('btn-submit').innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Simpan Data Pasien`;
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            document.getElementById('form-disposition').value = "Aktif";
+            handleFormDispositionChange();
+            
+            document.getElementsByName('form-shift')[0].checked = true;
+            lucide.createIcons();
+        }
+
+        function setFilter(filterVal) {
+            currentFilter = filterVal;
+            const filters = ["Semua", "Pagi", "Siang", "Malam"];
+            filters.forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filterVal) {
+                    btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm border border-blue-600";
+                } else {
+                    btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-600 border border-slate-200 hover:bg-slate-50";
+                }
+            });
+            render();
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            const tabActive = document.getElementById('tab-active');
+            const tabArchive = document.getElementById('tab-archive');
+
+            if (tabName === 'active') {
+                tabActive.className = "border-b-2 border-blue-600 px-4 py-2 text-sm font-extrabold text-blue-700 tracking-tight flex items-center gap-2";
+                tabArchive.className = "border-b-2 border-transparent px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 tracking-tight flex items-center gap-2";
+            } else {
+                tabActive.className = "border-b-2 border-transparent px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 tracking-tight flex items-center gap-2";
+                tabArchive.className = "border-b-2 border-blue-600 px-4 py-2 text-sm font-extrabold text-blue-700 tracking-tight flex items-center gap-2";
+            }
+            render();
+        }
+
+        // Menampilkan pesan kosong untuk form jika status dipulangkan
+        function handleFormDispositionChange() {
+            const selectVal = document.getElementById('form-disposition').value;
+            const sbarInputs = ["form-s", "form-b", "form-a", "form-r"];
+            if (selectVal !== "Aktif") {
+                sbarInputs.forEach(id => {
+                    document.getElementById(id).disabled = true;
+                    document.getElementById(id).placeholder = "Pasien akan diarsipkan, pengisian SBAR ditiadakan.";
+                    document.getElementById(id).value = "";
+                });
+            } else {
+                sbarInputs.forEach(id => {
+                    document.getElementById(id).disabled = false;
+                });
+                document.getElementById('form-s').placeholder = "Tuliskan keluhan utama...";
+                document.getElementById('form-b').placeholder = "Tuliskan diagnosa masuk...";
+                document.getElementById('form-a').placeholder = "Hasil pemeriksaan klinis...";
+                document.getElementById('form-r').placeholder = "Instruksi dokter/DPJP...";
+            }
+        }
+
+        // Ambil catatan SBAR sesuai dengan shift yang difilter (Pencegahan penumpukan data)
+        function getSbarForShift(patient, filter) {
+            if (filter === "Semua" || patient.shift === filter) {
+                return {
+                    pj: patient.pj || "-",
+                    s: patient.s || "-",
+                    b: patient.b || "-",
+                    a: patient.a || "-",
+                    r: patient.r || "-"
+                };
+            }
+            
+            // Cari data di log jika shift tidak cocok
+            const historic = patient.logs.find(log => log.shift === filter);
+            if (historic) {
+                return {
+                    pj: historic.pj || "-",
+                    s: historic.s || "-",
+                    b: historic.b || "-",
+                    a: historic.a || "-",
+                    r: historic.r || "-"
+                };
+            }
+
+            // Jika benar-benar kosong, return tanda kosong
+            return null;
+        }
+
+        // RENDERING KARTU PASIEN
+        function render() {
+            const container = document.getElementById('patient-list');
+            const searchVal = document.getElementById('search-bar').value.toLowerCase().trim();
+            container.innerHTML = "";
+
+            const targetDataset = currentTab === "active" ? patients : archives;
+
+            // Saring pencarian & filter shift
+            const filtered = targetDataset.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(searchVal) || 
+                                      p.bed.toLowerCase().includes(searchVal) ||
+                                      p.diagnosis.toLowerCase().includes(searchVal) ||
+                                      p.dpjp.toLowerCase().includes(searchVal);
+                
+                let matchesShift = true;
+                if (currentTab === "active" && currentFilter !== "Semua") {
+                    // Pasien aktif selalu muncul, tapi kami mengecek apakah mereka memiliki SBAR di shift tersebut
+                    matchesShift = true; 
+                } else if (currentTab === "archive" && currentFilter !== "Semua") {
+                    matchesShift = p.shift === currentFilter;
+                }
+                return matchesSearch && matchesShift;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm no-print">
+                        <i data-lucide="folder-open" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+                        <h4 class="font-bold text-slate-700 text-sm">Tidak Ada Rekam Medis</h4>
+                        <p class="text-xs text-slate-400 mt-1">Belum ada data pasien terdaftar yang cocok dengan filter Anda.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            let htmlContent = "";
+
+            filtered.forEach(p => {
+                // Tentukan warna border dan lencana berdasarkan tipe shift
+                let borderClass = "border-l-blue-500";
+                let badgeClass = "bg-blue-50 text-blue-700 border-blue-200";
+                
+                if (p.shift === "Pagi") {
+                    borderClass = "border-l-amber-500";
+                    badgeClass = "bg-amber-50 text-amber-700 border-amber-200";
+                } else if (p.shift === "Siang") {
+                    borderClass = "border-l-emerald-500";
+                    badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                } else if (p.shift === "Malam") {
+                    borderClass = "border-l-indigo-600";
+                    badgeClass = "bg-indigo-50 text-indigo-700 border-indigo-200";
+                }
+
+                let statusBadge = '';
+                if (p.status && p.status !== 'Aktif') {
+                    let statusColor = "bg-slate-100 text-slate-700 border-slate-300";
+                    if (p.status === "Pulang/Sembuh") statusColor = "bg-emerald-100 text-emerald-800 border-emerald-300";
+                    if (p.status === "APS") statusColor = "bg-yellow-100 text-yellow-800 border-yellow-300";
+                    if (p.status === "Meninggal") statusColor = "bg-red-100 text-red-800 border-red-300";
+                    if (p.status === "Pindah Ruang") statusColor = "bg-blue-100 text-blue-800 border-blue-300";
+                    if (p.status === "Rujuk") statusColor = "bg-purple-100 text-purple-800 border-purple-300";
+
+                    statusBadge = `
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase border ${statusColor}">
+                            ${p.status}
+                        </span>
+                    `;
+                }
+
+                // Pengelompokan Aksi Berdasarkan Tab Aktif/Arsip
+                let actionButtons = "";
+                if (currentTab === "active") {
+                    actionButtons = `
+                        <button onclick="startEditForShift(${p.id}, '${p.shift}')" title="Edit SBAR Shift Ini" class="p-1.5 bg-slate-50 hover:bg-slate-200 rounded-lg text-slate-600 transition border border-slate-200">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <div class="relative inline-block group">
+                            <button class="p-1.5 bg-slate-50 hover:bg-red-50 rounded-lg text-red-600 transition border border-slate-200">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <div class="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl p-2 hidden group-hover:block group-focus:block z-10 w-44">
+                                <span class="text-[9px] font-extrabold text-slate-400 block px-2 pb-1.5 border-b uppercase">Opsi Kepulangan</span>
+                                <button onclick="quickDischarge(${p.id}, 'Pulang/Sembuh')" class="w-full text-left text-xs font-semibold text-emerald-600 hover:bg-emerald-50 px-2 py-1.5 rounded-lg transition mt-1">Sembuh / Pulang</button>
+                                <button onclick="quickDischarge(${p.id}, 'APS')" class="w-full text-left text-xs font-semibold text-amber-600 hover:bg-amber-50 px-2 py-1.5 rounded-lg transition">Pulang APS</button>
+                                <button onclick="quickDischarge(${p.id}, 'Pindah Ruang')" class="w-full text-left text-xs font-semibold text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded-lg transition">Pindah Ruangan</button>
+                                <button onclick="quickDischarge(${p.id}, 'Rujuk')" class="w-full text-left text-xs font-semibold text-purple-600 hover:bg-purple-50 px-2 py-1.5 rounded-lg transition">Dirujuk RS Lain</button>
+                                <button onclick="quickDischarge(${p.id}, 'Meninggal')" class="w-full text-left text-xs font-semibold text-red-600 hover:bg-red-50 px-2 py-1.5 rounded-lg transition">Meninggal Dunia</button>
+                            </div>
+                        </div>
+                        <button onclick="triggerDelete(${p.id}, 'active')" title="Hapus Permanen" class="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-600 transition border border-red-100">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button onclick="restorePatient(${p.id})" title="Pulihkan Pasien" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-emerald-600 transition border border-emerald-100">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="triggerDelete(${p.id}, 'archive')" title="Hapus Permanen" class="p-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-red-600 transition border border-red-100">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                }
+
+                // Dapatkan SBAR kontekstual berdasarkan filter terpilih
+                const sbarContext = getSbarForShift(p, currentFilter);
+
+                let sbarContentHtml = '';
+                if (sbarContext) {
+                    sbarContentHtml = `
+                        <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-blue-50/40 p-3 rounded-xl border border-blue-50/70">
+                                <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest block mb-0.5">Situation (S)</span>
+                                <p class="text-xs text-slate-700 font-medium whitespace-pre-wrap italic">${sbarContext.s}</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Background (B)</span>
+                                <p class="text-xs text-slate-700 font-medium whitespace-pre-wrap italic">${sbarContext.b}</p>
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Assessment (A)</span>
+                                <p class="text-xs text-slate-700 font-medium whitespace-pre-wrap italic">${sbarContext.a}</p>
+                            </div>
+                            <div class="bg-emerald-50/40 p-3 rounded-xl border border-emerald-50/70">
+                                <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest block mb-0.5">Recommendation (R)</span>
+                                <p class="text-xs text-slate-800 font-bold whitespace-pre-wrap italic">${sbarContext.r}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Jika di shift saat ini kosong, berikan opsi untuk mengisi
+                    sbarContentHtml = `
+                        <div class="md:col-span-3 flex flex-col items-center justify-center bg-slate-50 p-6 rounded-xl border-2 border-dashed border-slate-200 no-print">
+                            <i data-lucide="file-warning" class="w-8 h-8 text-slate-300 mb-2"></i>
+                            <p class="text-xs text-slate-400 font-medium">Catatan SBAR untuk Dinas ${currentFilter} belum tersedia.</p>
+                            <button onclick="startEditForShift(${p.id}, '${currentFilter}')" class="mt-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-[11px] transition flex items-center gap-1.5">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Isi SBAR ${currentFilter}
+                            </button>
+                        </div>
+                        <div class="hidden print:block md:col-span-3 text-xs text-slate-400 italic">
+                            Catatan SBAR untuk dinas ${currentFilter} tidak diisi.
+                        </div>
+                    `;
+                }
+
+                // Render Logs / Riwayat operan masa lalu (Akordion)
+                let logHtml = '';
+                if (p.logs && p.logs.length > 0) {
+                    let logItems = '';
+                    p.logs.forEach(log => {
+                        logItems += `
+                            <div class="border-b border-slate-100 py-3 last:border-0">
+                                <div class="flex justify-between items-center mb-2 flex-wrap gap-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600 border uppercase">
+                                            Dinas ${log.shift}
+                                        </span>
+                                        <span class="text-[10px] text-blue-600 font-bold uppercase">PJ: ${log.pj}</span>
+                                    </div>
+                                    <span class="text-[9px] text-slate-400 font-medium flex items-center gap-1">
+                                        <i data-lucide="clock" class="w-3 h-3"></i> ${formatIndonesianDateTime(log.timestamp)}
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mt-2 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                                    <div>
+                                        <span class="text-[8px] font-extrabold text-slate-400 uppercase tracking-wider block">S:</span>
+                                        <p class="text-[11px] text-slate-600 italic whitespace-pre-wrap">${log.s}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-extrabold text-slate-400 uppercase tracking-wider block">B:</span>
+                                        <p class="text-[11px] text-slate-600 italic whitespace-pre-wrap">${log.b}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-extrabold text-slate-400 uppercase tracking-wider block">A:</span>
+                                        <p class="text-[11px] text-slate-600 italic whitespace-pre-wrap">${log.a}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-extrabold text-emerald-500 uppercase tracking-wider block">R:</span>
+                                        <p class="text-[11px] text-slate-800 font-semibold italic whitespace-pre-wrap">${log.r}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    logHtml = `
+                        <div class="mt-4 border-t border-slate-100 pt-3 no-print">
+                            <details class="group">
+                                <summary class="flex justify-between items-center text-[10px] font-extrabold text-blue-600 cursor-pointer list-none select-none uppercase tracking-wider">
+                                    <span class="flex items-center gap-1">
+                                        <i data-lucide="history" class="w-3.5 h-3.5 text-blue-500"></i>
+                                        Lihat Riwayat Operan Shift Sebelumnya (${p.logs.length})
+                                    </span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 transform group-open:rotate-180 transition"></i>
+                                </summary>
+                                <div class="mt-3 space-y-1 max-h-60 overflow-y-auto pr-1">
+                                    ${logItems}
+                                </div>
+                            </details>
+                        </div>
+                    `;
+                }
+
+                htmlContent += `
+                    <div class="bg-white rounded-2xl shadow-sm border-l-8 ${borderClass} border border-slate-200 overflow-hidden print-card hover:shadow-md transition animate-fade-in">
+                        <div class="p-5">
+                            <div class="flex justify-between items-start border-b border-slate-100 pb-3 mb-4">
+                                <div>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">REKAM MEDIS RAWAT INAP</span>
+                                    <h3 class="text-lg font-extrabold text-slate-800 uppercase tracking-tight mt-0.5">${p.name}</h3>
+                                    <div class="flex flex-wrap items-center gap-2 mt-1">
+                                        <div class="flex items-center gap-1.5 text-slate-500">
+                                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-500"></i>
+                                            <span class="text-xs font-bold text-blue-600 uppercase">BED: ${p.bed}</span>
+                                        </div>
+                                        ${statusBadge}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${badgeClass}">
+                                        Dinas: ${p.shift}
+                                    </span>
+                                    <div class="flex items-center gap-1 no-print">
+                                        ${actionButtons}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="md:col-span-1 bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col gap-3">
+                                    <div>
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Diagnosis Medis</span>
+                                        <p class="text-xs font-bold text-slate-700 leading-normal uppercase">${p.diagnosis}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Dokter DPJP</span>
+                                        <p class="text-xs font-bold text-emerald-700 leading-normal uppercase">${p.dpjp || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Dokter Lainnya / Konsulen</span>
+                                        <p class="text-xs font-medium text-slate-600 leading-normal">${p.otherDoctors || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Perawat PJ (Shift Aktif)</span>
+                                        <p class="text-xs font-bold text-blue-600">${sbarContext ? sbarContext.pj : '-'}</p>
+                                    </div>
+                                </div>
+
+                                ${sbarContentHtml}
+                            </div>
+
+                            ${logHtml}
+
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400">
+                                <span class="font-medium italic">Sinkronisasi Terakhir: ${formatIndonesianDateTime(p.timestamp)}</span>
+                                <div class="hidden print:block text-slate-600 font-bold">
+                                    Ttd Perawat Handover: _________________
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = htmlContent;
+            lucide.createIcons();
+        }
+
+        // SINKRONISASI DARI GOOGLE SPREADSHEET (TARIK DATA)
+        function syncFromSpreadsheet(isAuto = false) {
+            const url = document.getElementById('spreadsheet-url').value.trim();
+            if (!url) {
+                if (!isAuto) openAlert("Harap masukkan URL Web App Apps Script Google Sheets Anda terlebih dahulu!");
+                return;
+            }
+
+            if (!isAuto) showToast("Menghubungkan & mengambil data dari Google Sheets...");
+
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    mergeSyncedData(data);
+                    showToast(isAuto ? "Data berhasil diselaraskan otomatis dengan Google Sheets!" : "Data sukses diunduh & digabungkan!");
+                } else if (data && data.status === "error") {
+                    if (!isAuto) openAlert("Gagal sinkronisasi data: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Fetch Error:", error);
+                if (!isAuto) openAlert("Gagal terhubung dengan Spreadsheet. Periksa kembali URL dan Deployment Apps Script Anda.");
+            });
+        }
+
+        // FUNGSI GABUNG DATA (MERGE CONFLICT RESOLUTION)
+        function mergeSyncedData(incomingData) {
+            if (!Array.isArray(incomingData)) return;
+            
+            // Gabungkan data aktif & arsip lokal yang ada saat ini
+            let localAll = [...patients, ...archives];
+            let localMap = new Map();
+            localAll.forEach(p => localMap.set(p.id, p));
+
+            incomingData.forEach(incoming => {
+                if (localMap.has(incoming.id)) {
+                    let local = localMap.get(incoming.id);
+                    // Bandingkan timestamp. Pilih versi modifikasi terbaru
+                    let incomingTime = new Date(incoming.timestamp).getTime();
+                    let localTime = new Date(local.timestamp).getTime();
+                    
+                    if (isNaN(incomingTime)) incomingTime = 0;
+                    if (isNaN(localTime)) localTime = 0;
+
+                    if (incomingTime > localTime) {
+                        localMap.set(incoming.id, incoming); // Overwrite dengan versi Spreadsheet yang lebih baru
+                    }
+                } else {
+                    localMap.set(incoming.id, incoming); // Tambahkan pasien baru yang belum ada di lokal
+                }
+            });
+
+            // Pecah kembali data yang telah digabung ke status asalnya (Aktif / Arsip)
+            let mergedAll = Array.from(localMap.values());
+            
+            // Urutkan berdasarkan waktu modifikasi terbaru
+            mergedAll.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+            patients = mergedAll.filter(p => p.status === 'Aktif');
+            archives = mergedAll.filter(p => p.status !== 'Aktif');
+
+            saveToStorage();
+            render();
+        }
+
+        // SINKRONISASI KE GOOGLE SPREADSHEET VIA WEB APP APPS SCRIPT (KIRIM DATA)
+        function syncToSpreadsheet() {
+            const url = document.getElementById('spreadsheet-url').value.trim();
+            if (!url) {
+                openAlert("Harap masukkan URL Web App Apps Script Google Sheets Anda terlebih dahulu!");
+                return;
+            }
+
+            // Gabungkan semua data aktif dan arsip untuk dikirimkan
+            const fullPayload = [...patients, ...archives];
+            if (fullPayload.length === 0) {
+                openAlert("Tidak ada data pasien untuk disinkronkan!");
+                return;
+            }
+
+            showToast("Mengirimkan data database ke Google Sheets...");
+
+            fetch(url, {
+                method: "POST",
+                mode: "no-cors", // Mode no-cors ramah Google Apps Script
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(fullPayload)
+            })
+            .then(() => {
+                showToast("Sinkronisasi berhasil dikirim ke Google Sheets!");
+                saveToStorage();
+            })
+            .catch(error => {
+                openAlert("Error menghubungkan ke Google Sheets: " + error.toString());
+            });
+        }
+
+        // LOGIKA PENANGANAN MODAL CUSTOM DELETION (Bebas Alert/Confirm)
+        function triggerDelete(id, tabType) {
+            deleteTargetId = id;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            
+            // Definisikan tombol klik
+            document.getElementById('btn-cancel-confirm').onclick = function() {
+                modal.classList.add('hidden');
+                deleteTargetId = null;
+            };
+
+            document.getElementById('btn-confirm-delete').onclick = function() {
+                if (deleteTargetId) {
+                    if (tabType === 'active') {
+                        patients = patients.filter(p => p.id !== deleteTargetId);
+                    } else {
+                        archives = archives.filter(a => a.id !== deleteTargetId);
+                    }
+                    saveToStorage();
+                    render();
+                    showToast("Rekam medis pasien dihapus secara permanen!");
+                }
+                modal.classList.add('hidden');
+                deleteTargetId = null;
+            };
+        }
+
+        // CUSTOM MODAL ALERT
+        function openAlert(msg) {
+            document.getElementById('alert-modal-message').innerText = msg;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        // TOAST NOTIFIKASI
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // MODAL BANTUAN GOOGLE SHEET
+        function openHelpModal() {
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('help-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
