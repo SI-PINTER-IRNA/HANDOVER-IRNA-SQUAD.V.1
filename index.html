@@ -353,7 +353,7 @@
     </div>
 
     <!-- NOTIFIKASI TOAST MELAYANG -->
-    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-white/10 text-xs font-semibold flex items-center gap-2 transition duration-300 transform translate-y-20 opacity-0 no-print">
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-white/10 text-xs font-semibold flex items-center gap-2 transition duration-300 transform translate-y-20 opacity-0 no-print">
         <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
         <span id="toast-message">Operasi berhasil dilakukan!</span>
     </div>
@@ -363,35 +363,52 @@
         const mockPatients = [
             {
                 id: 1,
-                name: "Tn. Heri Prasetyo",
-                bed: "Sakura 02-B",
-                diagnosis: "Post Op Hernia Inguinalis",
-                pj: "Ns. Diana, S.Kep",
-                dpjp: "dr. Ahmad, Sp.B",
-                otherDoctors: "dr. Siska, Sp.An",
+                name: "(Belum Ada Pasien)",
+                bed: "Sakura 01",
+                diagnosis: "-",
+                pj: "-",
+                dpjp: "-",
+                otherDoctors: "-",
                 shift: "Pagi",
-                s: "Pasien mengeluh luka bekas operasi sedikit nyeri (Skala 3).",
-                b: "Pasien terpasang infus NaCl 0.9% 500ml / 8 jam. Riwayat alergi obat penisilin.",
-                a: "TTV stabil: TD 115/75 mmHg, Nadi 80 x/mnt, Suhu 36.5°C, SpO2 99% udara bebas.",
-                r: "Ganti verban luka operasi besok pagi, berikan ketorolac 30mg IV pukul 12.00 WIB.",
-                timestamp: "2026-05-31T08:30:15.000Z",
+                s: "-",
+                b: "-",
+                a: "-",
+                r: "-",
+                timestamp: new Date().toISOString(),
                 status: "Aktif",
                 logs: [] 
             },
             {
                 id: 2,
-                name: "Ny. Lestari Wahyuni",
-                bed: "Sakura 05-A",
-                diagnosis: "Gastroenteritis Akut (GEA)",
-                pj: "Ns. Bambang, A.Md.Kep",
-                dpjp: "dr. Budiman, Sp.PD",
+                name: "(Belum Ada Pasien)",
+                bed: "Sakura 02",
+                diagnosis: "-",
+                pj: "-",
+                dpjp: "-",
                 otherDoctors: "-",
                 shift: "Siang",
-                s: "Diare sudah berkurang dari 6 kali menjadi 2 kali, pasien lemas.",
-                b: "Masuk rumah sakit 2 hari lalu akibat mual muntah berlebih. Dehidrasi sedang.",
-                a: "TTV: TD 110/70, Nadi 84, Suhu 37.0°C. Terapi rehidrasi lancar, turgor kulit membaik.",
-                r: "Pertahankan infus RL 20 tpm, cek berkala eliminasi pasien, konsul diet lunak berlanjut.",
-                timestamp: "2026-05-31T14:15:33.000Z",
+                s: "-",
+                b: "-",
+                a: "-",
+                r: "-",
+                timestamp: new Date().toISOString(),
+                status: "Aktif",
+                logs: []
+            },
+            {
+                id: 3,
+                name: "(Belum Ada Pasien)",
+                bed: "Sakura 03",
+                diagnosis: "-",
+                pj: "-",
+                dpjp: "-",
+                otherDoctors: "-",
+                shift: "Malam",
+                s: "-",
+                b: "-",
+                a: "-",
+                r: "-",
+                timestamp: new Date().toISOString(),
                 status: "Aktif",
                 logs: []
             }
